@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎬 Video → Script</title>
+    <script src="https://js.puter.com/v2/"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Padauk', 'Myanmar Text', sans-serif;
+            background: #0e1117;
+            color: #fff;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #1a1d24;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        h1 { font-size: 24px; margin-bottom: 8px; }
+        .subtitle { font-size: 14px; color: #9b9baa; margin-bottom: 24px; }
+        .upload-area {
+            border: 2px dashed #3b3b52;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+        .upload-area:hover { border-color: #a78bfa; background: rgba(167,139,250,0.05); }
+        .upload-area.has-file { border-color: #4ade80; background: rgba(74,222,128,0.05); }
+        .upload-icon { font-size: 48px; margin-bottom: 12px; }
+        .upload-text { font-size: 16px; color: #cfcfdd; }
+        .file-name { font-size: 13px; color: #4ade80; margin-top: 8px; }
+        input[type="file"] { display: none; }
+        .status {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            display: none;
+        }
+        .status.show { display: block; }
+        .status.info { background: rgba(59,130,246,0.15); color: #93c5fd; }
+        .status.success { background: rgba(74,222,128,0.15); color: #4ade80; }
+        .status.error { background: rgba(239,68,68,0.15); color: #f87171; }
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #a78bfa, #7c3aed);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .btn:hover:not(:disabled) { transform: translateY(-2px); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .output-area { margin-top: 20px; display: none; }
+        .output-area.show { display: block; }
+        .output-header { display: flex; justify-content: space-between; margin-bottom: 12px; }
+        .copy-btn {
+            padding: 8px 16px;
+            background: #2d2d3d;
+            color: #fff;
+            border: 1px solid #3b3b52;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .copy-btn.copied { background: #4ade80; color: #000; }
+        #scriptOutput {
+            width: 100%;
+            min-height: 300px;
+            background: #0e1117;
+            border: 1px solid #3b3b52;
+            border-radius: 10px;
+            padding: 16px;
+            color: #fff;
+            font-family: 'Padauk', 'Myanmar Text', sans-serif;
+            font-size: 15px;
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 Video → မြန်မာ Script</h1>
+        <p class="subtitle">Video Upload → မြန်မာ Recap Script</p>
+
+        <div class="upload-area" id="uploadArea" onclick="document.getElementById('videoInput').click()">
+            <div class="upload-icon">📹</div>
+            <div class="upload-text" id="uploadText">Video ရွေးပါ (MP4, MOV, WEBM)</div>
+            <div class="file-name" id="fileName"></div>
+        </div>
+        <input type="file" id="videoInput" accept="video/*" />
+
+        <div class="status" id="status"></div>
+
+        <button class="btn" id="generateBtn" onclick="generateScript()" disabled>
+            ✨ Script ဖန်တီးမယ်
+        </button>
+
+        <div class="output-area" id="outputArea">
+            <div class="output-header">
+                <h2>📝 Script</h2>
+                <button class="copy-btn" id="copyBtn" onclick="copyScript()">📋 Copy</button>
+            </div>
+            <div id="scriptOutput"></div>
+        </div>
+    </div>
+
+    <script>
+        const PROMPT = "Watch this video carefully and write a clear, continuous movie recap script in Myanmar language for audio narration that matches the length of the video. Return plain speech text only without markdown titles.";
+
+        let selectedFile = null;
+        const videoInput = document.getElementById('videoInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const uploadText = document.getElementById('uploadText');
+        const fileName = document.getElementById('fileName');
+        const generateBtn = document.getElementById('generateBtn');
+        const statusEl = document.getElementById('status');
+        const outputArea = document.getElementById('outputArea');
+        const scriptOutput = document.getElementById('scriptOutput');
+        const copyBtn = document.getElementById('copyBtn');
+
+        videoInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                selectedFile = e.target.files[0];
+                const sizeMB = (selectedFile.size / 1024 / 1024).toFixed(2);
+                uploadText.textContent = "✅ Video ရွေးပြီး";
+                fileName.textContent = `${selectedFile.name} — ${sizeMB} MB`;
+                uploadArea.classList.add('has-file');
+                generateBtn.disabled = false;
+                showStatus('info', '📹 Video ရွေးပြီး — "Script ဖန်တီးမယ်" နှိပ်ပါ');
+            }
+        });
+
+        function showStatus(type, message) {
+            statusEl.className = `status show ${type}`;
+            statusEl.textContent = message;
+        }
+
+        async function generateScript() {
+            if (!selectedFile) {
+                showStatus('error', '❌ Video ရွေးပါ');
+                return;
+            }
+
+            generateBtn.disabled = true;
+            outputArea.classList.remove('show');
+
+            try {
+                showStatus('info', '📤 Video — Upload တင်နေသည်...');
+                const uploaded = await puter.fs.upload([selectedFile]);
+                const videoPath = uploaded.path || uploaded[0].path;
+
+                showStatus('info', '🔗 URL — ရယူနေသည်...');
+                const videoUrl = await puter.fs.getReadURL(videoPath, '1h');
+
+                showStatus('info', '🤖 Gemini — Script ရေးနေသည်... (၁-၃ မိနစ်)');
+                const script = await puter.ai.chat(PROMPT, videoUrl, {
+                    model: 'google/gemini-3.5-flash'
+                });
+
+                const scriptText = typeof script === 'string'
+                    ? script
+                    : (script.text || JSON.stringify(script));
+
+                scriptOutput.textContent = scriptText;
+                outputArea.classList.add('show');
+                showStatus('success', `✅ Script — ရပြီ (${scriptText.length} စာလုံး)`);
+
+            } catch (error) {
+                showStatus('error', `❌ Error: ${error.message || error}`);
+                console.error(error);
+            } finally {
+                generateBtn.disabled = false;
+            }
+        }
+
+        async function copyScript() {
+            try {
+                await navigator.clipboard.writeText(scriptOutput.textContent);
+                copyBtn.textContent = '✅ Copy ပြီး';
+                copyBtn.classList.add('copied');
+                setTimeout(() => {
+                    copyBtn.textContent = '📋 Copy';
+                    copyBtn.classList.remove('copied');
+                }, 2000);
+            } catch (err) {
+                showStatus('error', '❌ Copy — မရဘူး');
+            }
+        }
+    </script>
+</body>
+          </html>
