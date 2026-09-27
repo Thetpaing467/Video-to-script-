@@ -348,4 +348,4 @@ if st.button("✨ Generate Recap Video", type="primary", use_container_width=Tru
     st.video("final.mp4")
 
     with open("final.mp4", "rb") as f:
-        st.download_button("📥 Download Recap Video", f, file_name="recap.mp4")
+        st.download_button("📥 Download Recap Video", f, file_name="recap.mp4"
